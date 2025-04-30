@@ -11,7 +11,7 @@
 '''
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import MinMaxScaler
+# from sklearn.preprocessing import MinMaxScaler
 import Obstacle
 from Utils import dist
 # 随机种子
@@ -88,7 +88,6 @@ def fitness_func(trajectors,obs,w,safe_dist,fatality_rate):
     # print(trajectors_safe)
 
     fit = w[0] * trajectors_length + w[1] * trajectors_safe + w[2] * fatality_rate
-    print(fit)
     return fit
 """
     start: 起始点
@@ -145,8 +144,9 @@ def gravitation(exfitness,fit_index,trajectors,a,G=1,q=10 ** -6,LevyFlight=0.1,t
     q : 防止除0错误 10 ** -6
     Levy Flight : 随机扰动项(避免局部最优)
     t = 1  虚拟时间步长
+    epochs: 迭代次数默认 100 
 """
-def KOA(start,end,obs,w,fatality_rate,num_trajector=10,num_trajector_point=5,safe_dist = 1,G = 1,q = 10 ** -6,LevyFlight=1,t = 1):
+def KOA(start,end,obs,w,fatality_rate,num_trajector=10,num_trajector_point=5,safe_dist = 1,G = 1,q = 10 ** -6,LevyFlight=1,t = 1,epochs = 100):
     num_trajector_point -=2
 #  初始行星种群（航迹）
     trajectors = inittrajector(start,end,num_trajector,num_trajector_point)
@@ -167,29 +167,29 @@ def KOA(start,end,obs,w,fatality_rate,num_trajector=10,num_trajector_point=5,saf
     # print(f"fits = {fits}")
     # print(len(fits))
 #  计算引力和速度
-    a = 0.5
-    print(f"优化前：{trajectors}")
-    gravitation(fits[fit_index],fit_index,trajectors,a,G,q,LevyFlight,t)
-    print(f"优化后：{trajectors}")
 #   根据万有引力公式，计算各行星所受引力的大小，其中的太阳质量和行星质量由适应度函数决定
-
 #  速度取决于行星相对于太阳的位置，与太阳越近，引力增大，速度增快，反之速度下降（利用距离太阳较远的行星进行探索，以寻找新的解决方案，利用距离太阳教员的行星进行开发以搜索最优解附近的新位置）
-
 # 位置更新与保留
-
+    a = 0.5
+    for epoch in range(epochs):
+        a -= (0.45/epochs)
+        gravitation(fits[fit_index],fit_index,trajectors,a,G,q,LevyFlight,t)
+        fits = fitness_func(trajectors, obs, w, safe_dist, fatality_rate)
+        fit_index = np.argmax(fits)
 # 画出最优路径的图形
     return trajectors,fit_index
 
 if __name__ == "__main__":
     start = (0,0,0)
-    end = (10,10,10)
-    num_trajector = 10
-    num_trajector_point = 6
-    obs = [["sphere",[(3,3,3),0]]]
+    end = (100,100,0)
+    num_trajector = 1000
+    num_trajector_point = 15
+    obs = [["sphere",[(30,30,30),0]]]
     fatality_rate = 0
     w = [2,1,1]
+    epochs = 100
 
-    trajectors,fit_index = KOA(start,end,obs,w,fatality_rate,num_trajector,num_trajector_point)
+    trajectors,fit_index = KOA(start=start,end = end,obs = obs,w = w,fatality_rate = fatality_rate,num_trajector = num_trajector,num_trajector_point = num_trajector_point,epochs=epochs)
     center = obs[0][1][0]
     R = obs[0][1][1]
 
@@ -205,18 +205,19 @@ if __name__ == "__main__":
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection='3d')
     ax.plot_surface(x, y, z, color='b', alpha=0.1, edgecolor='k')
-
-    for trajector in trajectors:
-        a_x = [point[0] for point in trajector]
-        a_y = [point[1] for point in trajector]
-        a_z = [point[2] for point in trajector]
-        ax.plot(a_x, a_y, a_z, color='r')
+    #
+    # for trajector in trajectors:
+    #     a_x = [point[0] for point in trajector]
+    #     a_y = [point[1] for point in trajector]
+    #     a_z = [point[2] for point in trajector]
+    #     ax.plot(a_x, a_y, a_z, color='r')
     trajector = trajectors[fit_index]
     a_x = [point[0] for point in trajector]
     a_y = [point[1] for point in trajector]
     a_z = [point[2] for point in trajector]
     ax.plot(a_x,a_y,a_z,color='b')
     plt.show()
+    print(f"最优航迹路线:{trajector}")
     # for i in range(len(trajectors)):
     #     print(trajectors[i])
     #     print("\n")

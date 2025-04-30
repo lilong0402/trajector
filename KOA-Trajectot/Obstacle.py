@@ -72,7 +72,6 @@ class Obstacle(Object):
 
 
         if dist < safe_dist:
-            print(f"dist:{dist}")
             return dist / safe_dist
         return 1
 
